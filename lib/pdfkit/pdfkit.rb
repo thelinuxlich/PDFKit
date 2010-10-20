@@ -14,14 +14,15 @@ class PDFKit
     end
   end
   
-  attr_accessor :source, :stylesheets
+  attr_accessor :source, :stylesheets,:fix_fonts_for_windows
   attr_reader :options
   
   def initialize(url_file_or_html, options = {})
     @source = Source.new(url_file_or_html)
     
     @stylesheets = []
-
+    @fix_fonts_for_windows = false  
+    
     @options = PDFKit.configuration.default_options.merge(options)
     @options.merge! find_options_in_meta(url_file_or_html) unless source.url?
     @options = normalize_options(@options)
@@ -56,7 +57,7 @@ class PDFKit
   
   def to_pdf(path=nil)
     append_stylesheets
-
+    fix_all_font_styles_for_windows if @fix_fonts_for_windows == true
     args = command
     args[-1] = path if path && args[-1] == "-"
     invoke = args.map {|arg| %{"#{arg.gsub('"','\\"')}"}} * " "
@@ -134,5 +135,10 @@ class PDFKit
         value.to_s
       end
     end
-  
+    
+    def fix_all_font_styles_for_windows
+     @source.to_s.gsub!(/(font-family:[\s]?)([a-zA-Z,\s]+)[;]?["]?$/) do |s| 
+        s = $1+$2.split(',').map{|font| font = "'#{font}'"}.join(',')
+     end   
+    end
 end
